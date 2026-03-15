@@ -1,0 +1,37 @@
+{
+  "entities": {
+    "Order": {
+      "title": "Order",
+      "description": "A restaurant order placed by a waiter for a specific table.",
+      "type": "object",
+      "properties": {
+        "tableNo": { "type": "string", "description": "The table number" },
+        "waiterName": { "type": "string", "description": "Name of the waiter" },
+        "status": { "type": "string", "enum": ["open", "paid"], "description": "Current status of the order" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "en": { "type": "string" },
+              "mr": { "type": "string" },
+              "price": { "type": "number" },
+              "quantity": { "type": "number" }
+            },
+            "required": ["id", "en", "mr", "price", "quantity"]
+          }
+        },
+        "createdAt": { "type": "timestamp" },
+        "updatedAt": { "type": "timestamp" }
+      },
+      "required": ["tableNo", "waiterName", "status", "items", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "Stores all restaurant orders."
+    }
+  }
+}

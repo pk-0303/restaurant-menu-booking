@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isValidOrder(data) {
+      return data.keys().hasAll(['tableNo', 'waiterName', 'status', 'items', 'createdAt', 'updatedAt']) &&
+             data.tableNo is string && data.tableNo.size() > 0 && data.tableNo.size() < 20 &&
+             data.waiterName is string && data.waiterName.size() > 0 && data.waiterName.size() < 50 &&
+             data.status in ['open', 'paid'] &&
+             data.items is list && data.items.size() <= 100 &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+
+    match /orders/{orderId} {
+      // Allow any authenticated user (staff) to read and write orders
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidOrder(request.resource.data);
+      allow update: if isAuthenticated() && isValidOrder(request.resource.data) &&
+                    request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAuthenticated();
+    }
+  }
+}
