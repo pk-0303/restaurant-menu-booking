@@ -29,9 +29,9 @@
     }
   },
   "firestore": {
-    "/orders/{orderId}": {
+    "/restaurants/{restaurantId}/orders/{orderId}": {
       "schema": { "$ref": "#/entities/Order" },
-      "description": "Stores all restaurant orders."
+      "description": "Stores all restaurant orders, scoped by restaurant ID."
     }
   }
 }

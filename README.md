@@ -1,4 +1,4 @@
-# Kinara Veg POS - Cloudflare Deployment Guide
+# Restaurant POS - Cloudflare Deployment Guide
 
 Cloudflare Pages **fully supports** this project! The `.tsx` (React) and `.ts` (TypeScript) files are automatically converted into pure HTML, CSS, and JavaScript during the build process.
 

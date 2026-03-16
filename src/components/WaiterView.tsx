@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Search, ShoppingCart, Plus, Minus, X, Send } from 'lucide-react';
-import { translations, categories, menuData } from '../data';
+import { RestaurantConfig } from '../data';
 import { createOrUpdateOrder, OrderItem } from '../firebaseUtils';
 
 interface WaiterViewProps {
@@ -8,25 +8,26 @@ interface WaiterViewProps {
   tableNo: string;
   waiterName: string;
   onBack: () => void;
+  config: RestaurantConfig;
 }
 
-export default function WaiterView({ currentLang, tableNo, waiterName, onBack }: WaiterViewProps) {
+export default function WaiterView({ currentLang, tableNo, waiterName, onBack, config }: WaiterViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategoryId, setActiveCategoryId] = useState(0);
   const [cart, setCart] = useState<OrderItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const t = translations[currentLang];
+  const t = config.translations[currentLang];
 
   const filteredMenu = useMemo(() => {
     if (searchQuery) {
-      return menuData.filter(item =>
+      return config.menuData.filter(item =>
         item[currentLang].toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
-    return menuData.filter(item => item.categoryId === activeCategoryId);
-  }, [searchQuery, activeCategoryId, currentLang]);
+    return config.menuData.filter(item => item.categoryId === activeCategoryId);
+  }, [searchQuery, activeCategoryId, currentLang, config.menuData]);
 
   const addToCart = (item: any) => {
     setCart(prev => {
@@ -54,7 +55,7 @@ export default function WaiterView({ currentLang, tableNo, waiterName, onBack }:
     if (cart.length === 0) return;
     setIsSaving(true);
     try {
-      await createOrUpdateOrder(tableNo, waiterName, cart);
+      await createOrUpdateOrder(config.id, tableNo, waiterName, cart);
       setCart([]);
       setIsCartOpen(false);
       alert(t.orderUpdated);
@@ -96,7 +97,7 @@ export default function WaiterView({ currentLang, tableNo, waiterName, onBack }:
         {!searchQuery && (
           <div className="sticky top-0 z-40 bg-[#fdfbf7]/95 backdrop-blur-md shadow-sm border-b border-stone-200 pt-3 pb-3 px-2 mb-8 -mx-4 md:mx-0 md:rounded-b-2xl overflow-x-auto no-scrollbar">
             <div className="flex flex-nowrap md:flex-wrap justify-start md:justify-center gap-2 min-w-max md:min-w-0 px-2">
-              {categories.map(category => (
+              {config.categories.map(category => (
                 <button
                   key={category.id}
                   onClick={() => setActiveCategoryId(category.id)}
@@ -120,7 +121,7 @@ export default function WaiterView({ currentLang, tableNo, waiterName, onBack }:
               <span>
                 {searchQuery 
                   ? t.searchResults 
-                  : categories.find(c => c.id === activeCategoryId)?.[currentLang as keyof typeof categories[0]]}
+                  : config.categories.find(c => c.id === activeCategoryId)?.[currentLang as keyof typeof config.categories[0]]}
               </span>
               <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-10 h-1 bg-red-600 rounded-full"></div>
             </h2>
@@ -148,7 +149,7 @@ export default function WaiterView({ currentLang, tableNo, waiterName, onBack }:
                       </h3>
                       {searchQuery && (
                         <p className="text-[10px] md:text-xs font-sans text-stone-400 uppercase tracking-wider mt-1">
-                          {categories.find(c => c.id === item.categoryId)?.[currentLang as keyof typeof categories[0]]}
+                          {config.categories.find(c => c.id === item.categoryId)?.[currentLang as keyof typeof config.categories[0]]}
                         </p>
                       )}
                     </div>

@@ -1,5 +1,5 @@
 import { collection, doc, setDoc, updateDoc, onSnapshot, query, where, serverTimestamp, getDocs } from 'firebase/firestore';
-import { db } from './firebase';
+import { db, auth } from './firebase';
 
 export interface OrderItem {
   id: string;
@@ -19,8 +19,63 @@ export interface Order {
   updatedAt: any;
 }
 
-export const subscribeToOpenOrders = (callback: (orders: Order[]) => void) => {
-  const q = query(collection(db, 'orders'), where('status', '==', 'open'));
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string;
+    email?: string | null;
+    emailVerified?: boolean;
+    isAnonymous?: boolean;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId: string;
+      displayName: string | null;
+      email: string | null;
+      photoUrl: string | null;
+    }[];
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
+const getOrdersCollection = (restaurantId: string) => {
+  return collection(db, `restaurants/${restaurantId}/orders`);
+};
+
+export const subscribeToOpenOrders = (restaurantId: string, callback: (orders: Order[]) => void) => {
+  const q = query(getOrdersCollection(restaurantId), where('status', '==', 'open'));
   return onSnapshot(q, (snapshot) => {
     const orders: Order[] = [];
     snapshot.forEach((doc) => {
@@ -34,55 +89,63 @@ export const subscribeToOpenOrders = (callback: (orders: Order[]) => void) => {
     });
     callback(orders);
   }, (error) => {
-    console.error("Error fetching orders:", error);
+    handleFirestoreError(error, OperationType.LIST, `restaurants/${restaurantId}/orders`);
   });
 };
 
-export const createOrUpdateOrder = async (tableNo: string, waiterName: string, items: OrderItem[]) => {
-  // Check if there's an open order for this table
-  const q = query(collection(db, 'orders'), where('tableNo', '==', tableNo), where('status', '==', 'open'));
-  const snapshot = await getDocs(q);
-  
-  if (!snapshot.empty) {
-    // Update existing order
-    const orderDoc = snapshot.docs[0];
-    const existingData = orderDoc.data() as Order;
+export const createOrUpdateOrder = async (restaurantId: string, tableNo: string, waiterName: string, items: OrderItem[]) => {
+  try {
+    // Check if there's an open order for this table
+    const q = query(getOrdersCollection(restaurantId), where('tableNo', '==', tableNo), where('status', '==', 'open'));
+    const snapshot = await getDocs(q);
     
-    // Merge items
-    const mergedItems = [...existingData.items];
-    items.forEach(newItem => {
-      const existingItemIndex = mergedItems.findIndex(i => i.id === newItem.id);
-      if (existingItemIndex >= 0) {
-        mergedItems[existingItemIndex].quantity += newItem.quantity;
-      } else {
-        mergedItems.push(newItem);
-      }
-    });
+    if (!snapshot.empty) {
+      // Update existing order
+      const orderDoc = snapshot.docs[0];
+      const existingData = orderDoc.data() as Order;
+      
+      // Merge items
+      const mergedItems = [...existingData.items];
+      items.forEach(newItem => {
+        const existingItemIndex = mergedItems.findIndex(i => i.id === newItem.id);
+        if (existingItemIndex >= 0) {
+          mergedItems[existingItemIndex].quantity += newItem.quantity;
+        } else {
+          mergedItems.push(newItem);
+        }
+      });
 
-    await updateDoc(doc(db, 'orders', orderDoc.id), {
-      items: mergedItems,
-      waiterName, // Update waiter name in case a different waiter adds to it
-      updatedAt: serverTimestamp()
-    });
-    return orderDoc.id;
-  } else {
-    // Create new order
-    const newOrderRef = doc(collection(db, 'orders'));
-    await setDoc(newOrderRef, {
-      tableNo,
-      waiterName,
-      status: 'open',
-      items,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
-    return newOrderRef.id;
+      await updateDoc(doc(db, `restaurants/${restaurantId}/orders`, orderDoc.id), {
+        items: mergedItems,
+        waiterName, // Update waiter name in case a different waiter adds to it
+        updatedAt: serverTimestamp()
+      });
+      return orderDoc.id;
+    } else {
+      // Create new order
+      const newOrderRef = doc(getOrdersCollection(restaurantId));
+      await setDoc(newOrderRef, {
+        tableNo,
+        waiterName,
+        status: 'open',
+        items,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+      return newOrderRef.id;
+    }
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `restaurants/${restaurantId}/orders`);
   }
 };
 
-export const markOrderAsPaid = async (orderId: string) => {
-  await updateDoc(doc(db, 'orders', orderId), {
-    status: 'paid',
-    updatedAt: serverTimestamp()
-  });
+export const markOrderAsPaid = async (restaurantId: string, orderId: string) => {
+  try {
+    await updateDoc(doc(db, `restaurants/${restaurantId}/orders`, orderId), {
+      status: 'paid',
+      updatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `restaurants/${restaurantId}/orders/${orderId}`);
+  }
 };

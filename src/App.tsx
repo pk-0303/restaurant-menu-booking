@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Languages, UtensilsCrossed, LogIn, UserCircle, LogOut } from 'lucide-react';
-import { translations } from './data';
+import { getRestaurantConfig, RestaurantConfig } from './data';
 import WaiterView from './components/WaiterView';
 import CounterView from './components/CounterView';
 import { auth } from './firebase';
@@ -11,12 +11,11 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [role, setRole] = useState<'waiter' | 'counter' | null>(null);
+  const [config, setConfig] = useState<RestaurantConfig | null>(null);
   
   // Waiter specific state
   const [tableNo, setTableNo] = useState('');
   const [waiterName, setWaiterName] = useState('');
-
-  const t = translations[currentLang];
 
   useEffect(() => {
     if (currentLang === 'mr') {
@@ -29,6 +28,7 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      setConfig(getRestaurantConfig(currentUser?.email));
       setIsAuthReady(true);
     });
     return () => unsubscribe();
@@ -49,6 +49,7 @@ export default function App() {
       setRole(null);
       setTableNo('');
       setWaiterName('');
+      setConfig(getRestaurantConfig(null));
     } catch (error) {
       console.error("Logout error:", error);
     }
@@ -61,9 +62,11 @@ export default function App() {
     }
   };
 
-  if (!isAuthReady) {
+  if (!isAuthReady || !config) {
     return <div className="min-h-screen flex items-center justify-center bg-[#fdfbf7] text-stone-500">Loading...</div>;
   }
+
+  const t = config.translations[currentLang];
 
   return (
     <div className="min-h-screen text-stone-900 font-sans selection:bg-red-200 selection:text-red-900 bg-[#fdfbf7]">
@@ -112,7 +115,7 @@ export default function App() {
           <div className="bg-white p-8 rounded-3xl shadow-xl border border-stone-200">
             <UserCircle className="w-16 h-16 text-stone-300 mx-auto mb-4" />
             <h2 className="text-2xl font-serif font-bold text-stone-800 mb-2">{t.loginRequired}</h2>
-            <p className="text-stone-500 mb-8">Please sign in to access the Kinara Veg POS system.</p>
+            <p className="text-stone-500 mb-8">Please sign in to access the Restaurant POS system.</p>
             <button 
               onClick={handleLogin}
               className="w-full bg-red-700 text-white py-3 rounded-xl font-semibold hover:bg-red-800 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-red-700/20"
@@ -197,11 +200,13 @@ export default function App() {
           tableNo={tableNo} 
           waiterName={waiterName} 
           onBack={() => setRole(null)} 
+          config={config}
         />
       ) : (
         <CounterView 
           currentLang={currentLang} 
           onBack={() => setRole(null)} 
+          config={config}
         />
       )}
     </div>

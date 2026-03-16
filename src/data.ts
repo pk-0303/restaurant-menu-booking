@@ -1,6 +1,13 @@
-export const translations = {
+export interface RestaurantConfig {
+  id: string;
+  translations: any;
+  categories: any[];
+  menuData: any[];
+}
+
+const defaultTranslations = {
   en: {
-    title: "Kinara Veg",
+    title: "Restaurant POS",
     subtitle: "Authentic & Pure",
     searchPlaceholder: "Search for a dish...",
     searchResults: "Search Results",
@@ -13,7 +20,7 @@ export const translations = {
     printBill: "Print Bill",
     emptyCart: "Cart is empty",
     checkout: "Checkout",
-    billTitle: "Kinara Veg - Bill",
+    billTitle: "Restaurant - Bill",
     qty: "Qty",
     price: "Price",
     item: "Item",
@@ -44,7 +51,7 @@ export const translations = {
     billNo: "Bill No."
   },
   mr: {
-    title: "किनारा व्हेज",
+    title: "रेस्टॉरंट पीओएस",
     subtitle: "अस्सल आणि शुद्ध",
     searchPlaceholder: "डिश शोधा...",
     searchResults: "शोध परिणाम",
@@ -57,7 +64,7 @@ export const translations = {
     printBill: "बिल प्रिंट करा",
     emptyCart: "कार्ट रिकामी आहे",
     checkout: "चेकआउट",
-    billTitle: "किनारा व्हेज - बिल",
+    billTitle: "रेस्टॉरंट - बिल",
     qty: "प्रमाण",
     price: "किंमत",
     item: "पदार्थ",
@@ -89,7 +96,7 @@ export const translations = {
   }
 };
 
-export const categories = [
+const defaultCategories = [
   { id: 0, en: "Mix Veg Special", mr: "मिक्स व्हेज स्पेशल" },
   { id: 1, en: "Snacks / Salad", mr: "स्नॅक्स / सॅलड" },
   { id: 2, en: "Soups", mr: "सूप" },
@@ -108,9 +115,9 @@ export const categories = [
   { id: 15, en: "Jain Dishes", mr: "जैन डिशेस" }
 ];
 
-export const menuData = [
+const defaultMenuData = [
   // Mix Veg Special
-  { id: "mv1", en: "Kinara Special Veg", mr: "किनारा स्पेशल व्हेज", price: 330, categoryId: 0 },
+  { id: "mv1", en: "Restaurant Special Veg", mr: "रेस्टॉरंट स्पेशल व्हेज", price: 330, categoryId: 0 },
   { id: "mv2", en: "Veg Bajirao", mr: "व्हेज बाजीराव", price: 230, categoryId: 0 },
   { id: "mv3", en: "Veg Angara", mr: "व्हेज अंगारा", price: 230, categoryId: 0 },
   { id: "mv4", en: "Veg Tawa", mr: "व्हेज तवा", price: 230, categoryId: 0 },
@@ -355,3 +362,62 @@ export const menuData = [
   { id: "ps34", en: "Paneer Banjara", mr: "पनीर बंजारा", price: 260, categoryId: 13 },
   { id: "ps35", en: "Paneer Diwani Handi", mr: "पनीर दिवाणी हंडी", price: 280, categoryId: 13 }
 ];
+
+// Example of a second restaurant's configuration
+const burgerTranslations = {
+  en: {
+    ...defaultTranslations.en,
+    title: "Burger Joint",
+    subtitle: "Best Burgers in Town",
+    billTitle: "Burger Joint - Bill",
+  },
+  mr: {
+    ...defaultTranslations.mr,
+    title: "बर्गर जॉइंट",
+    subtitle: "शहरातील सर्वोत्तम बर्गर",
+    billTitle: "बर्गर जॉइंट - बिल",
+  }
+};
+
+const burgerCategories = [
+  { id: 0, en: "Burgers", mr: "बर्गर" },
+  { id: 1, en: "Sides", mr: "साईड्स" },
+  { id: 2, en: "Drinks", mr: "ड्रिंक्स" }
+];
+
+const burgerMenuData = [
+  { id: "b1", en: "Classic Cheeseburger", mr: "क्लासिक चीजबर्गर", price: 150, categoryId: 0 },
+  { id: "b2", en: "Double Patty Burger", mr: "डबल पॅटी बर्गर", price: 220, categoryId: 0 },
+  { id: "b3", en: "Veggie Burger", mr: "व्हेजी बर्गर", price: 130, categoryId: 0 },
+  { id: "s1", en: "French Fries", mr: "फ्रेंच फ्राईज", price: 80, categoryId: 1 },
+  { id: "s2", en: "Onion Rings", mr: "कांदा भजी", price: 100, categoryId: 1 },
+  { id: "d1", en: "Cola", mr: "कोला", price: 50, categoryId: 2 },
+  { id: "d2", en: "Milkshake", mr: "मिल्कशेक", price: 120, categoryId: 2 }
+];
+
+export const getRestaurantConfig = (email: string | null | undefined): RestaurantConfig => {
+  const emailToRestaurantId: Record<string, string> = {
+    // Add specific emails here to route them to different restaurants
+    "pushkarkadu03@gmail.com": "restaurant_1", // Default to the main restaurant
+    "burger@example.com": "restaurant_2"
+  };
+
+  const restaurantId = email ? (emailToRestaurantId[email.toLowerCase()] || "restaurant_1") : "restaurant_1";
+
+  if (restaurantId === "restaurant_2") {
+    return {
+      id: "restaurant_2",
+      translations: burgerTranslations,
+      categories: burgerCategories,
+      menuData: burgerMenuData
+    };
+  }
+
+  // Default / Restaurant 1
+  return {
+    id: "restaurant_1",
+    translations: defaultTranslations,
+    categories: defaultCategories,
+    menuData: defaultMenuData
+  };
+};

@@ -1,21 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { Printer, CheckCircle, Clock } from 'lucide-react';
-import { translations } from '../data';
+import { RestaurantConfig } from '../data';
 import { subscribeToOpenOrders, markOrderAsPaid, Order } from '../firebaseUtils';
 
 interface CounterViewProps {
   currentLang: 'en' | 'mr';
   onBack: () => void;
+  config: RestaurantConfig;
 }
 
-export default function CounterView({ currentLang, onBack }: CounterViewProps) {
+export default function CounterView({ currentLang, onBack, config }: CounterViewProps) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
-  const t = translations[currentLang];
+  const t = config.translations[currentLang];
 
   useEffect(() => {
-    const unsubscribe = subscribeToOpenOrders((fetchedOrders) => {
+    const unsubscribe = subscribeToOpenOrders(config.id, (fetchedOrders) => {
       setOrders(fetchedOrders);
       if (selectedOrder) {
         const updatedSelected = fetchedOrders.find(o => o.id === selectedOrder.id);
@@ -36,7 +37,7 @@ export default function CounterView({ currentLang, onBack }: CounterViewProps) {
 
   const handleMarkPaid = async (orderId: string) => {
     if (window.confirm("Mark this order as paid?")) {
-      await markOrderAsPaid(orderId);
+      await markOrderAsPaid(config.id, orderId);
       setSelectedOrder(null);
     }
   };

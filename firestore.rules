@@ -16,7 +16,7 @@ service cloud.firestore {
              data.updatedAt is timestamp;
     }
 
-    match /orders/{orderId} {
+    match /restaurants/{restaurantId}/orders/{orderId} {
       // Allow any authenticated user (staff) to read and write orders
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && isValidOrder(request.resource.data);
