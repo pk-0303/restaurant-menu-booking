@@ -139,6 +139,27 @@ export const createOrUpdateOrder = async (restaurantId: string, tableNo: string,
   }
 };
 
+export const getPaidOrders = async (restaurantId: string) => {
+  try {
+    const q = query(getOrdersCollection(restaurantId), where('status', '==', 'paid'));
+    const snapshot = await getDocs(q);
+    const orders: Order[] = [];
+    snapshot.forEach((doc) => {
+      orders.push({ id: doc.id, ...doc.data() } as Order);
+    });
+    // Sort by updated time descending
+    orders.sort((a, b) => {
+      const timeA = a.updatedAt?.toMillis() || 0;
+      const timeB = b.updatedAt?.toMillis() || 0;
+      return timeB - timeA;
+    });
+    return orders;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, `restaurants/${restaurantId}/orders`);
+    return [];
+  }
+};
+
 export const markOrderAsPaid = async (restaurantId: string, orderId: string) => {
   try {
     await updateDoc(doc(db, `restaurants/${restaurantId}/orders`, orderId), {

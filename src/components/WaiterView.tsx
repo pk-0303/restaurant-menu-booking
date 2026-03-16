@@ -17,6 +17,7 @@ export default function WaiterView({ currentLang, tableNo, waiterName, onBack, c
   const [cart, setCart] = useState<OrderItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null);
 
   const t = config.translations[currentLang];
 
@@ -58,10 +59,12 @@ export default function WaiterView({ currentLang, tableNo, waiterName, onBack, c
       await createOrUpdateOrder(config.id, tableNo, waiterName, cart);
       setCart([]);
       setIsCartOpen(false);
-      alert(t.orderUpdated);
+      setNotification({ message: t.orderUpdated || "Order sent to kitchen!", type: 'success' });
+      setTimeout(() => setNotification(null), 3000);
     } catch (error) {
       console.error("Error saving order:", error);
-      alert("Error saving order. Please try again.");
+      setNotification({ message: "Error saving order. Please try again.", type: 'error' });
+      setTimeout(() => setNotification(null), 3000);
     } finally {
       setIsSaving(false);
     }
@@ -69,6 +72,11 @@ export default function WaiterView({ currentLang, tableNo, waiterName, onBack, c
 
   return (
     <div className="pb-24">
+      {notification && (
+        <div className={`fixed top-20 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-full shadow-lg text-white font-medium animate-in slide-in-from-top-4 fade-in ${notification.type === 'success' ? 'bg-emerald-600' : 'bg-red-600'}`}>
+          {notification.message}
+        </div>
+      )}
       <div className="max-w-4xl mx-auto px-4 pt-4 flex justify-between items-center mb-4">
         <button onClick={onBack} className="text-red-700 hover:underline font-medium">
           &larr; {t.backToRoles}
